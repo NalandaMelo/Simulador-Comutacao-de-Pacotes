@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulador de Comutação: Topologia Configurável</title>
+  <title>Simulador de Comutação de Pacotes</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -48,7 +48,7 @@
         </div>
         <div>
           <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            Simulador de Comutação Multi-Roteador
+            Simulador de Comutação de Pacotes
             <span class="text-xs font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Topologia Configurável</span>
           </h1>
           <p class="text-xs text-slate-400 mt-0.5">Crie roteadores customizados, conecte usuários e simule a fragmentação e encaminhamento nodal</p>
@@ -114,15 +114,15 @@
 
     <button onclick="iniciarSimulacao()" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-cyan-500/20 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2">
       <i data-lucide="play-circle" class="w-5 h-5"></i>
-      Iniciar Simulação de Roteamento Dinâmico
+      Iniciar Simulação
     </button>
 
-    <!-- ESTÁGIO 1: FRAGMENTAÇÃO -->
-    <div class="glass p-5 rounded-2xl border border-slate-800 space-y-3">
-      <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
-        <i data-lucide="scissors" class="w-4 h-4"></i> Estágio 1: Divisão das Mensagens em Pacotes (Fragmentação)
+    <!-- ESTÁGIO 1: FRAGMENTAÇÃO (COMPACTO) -->
+    <div class="glass p-3 rounded-xl border border-slate-800 space-y-2">
+      <div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+        <i data-lucide="scissors" class="w-3.5 h-3.5"></i> Estágio 1: Divisão das Mensagens em Pacotes (Fragmentação)
       </div>
-      <div id="frag-stage" class="flex flex-wrap gap-3 font-mono text-xs">
+      <div id="frag-stage" class="flex flex-col gap-1.5 font-mono text-xs max-h-32 overflow-y-auto pr-1">
         <span class="text-slate-500 text-xs italic">Aguardando início...</span>
       </div>
     </div>
@@ -130,23 +130,23 @@
     <!-- PAINEL DE ATRASOS -->
     <div class="glass p-4 rounded-xl flex flex-wrap items-center justify-around gap-4 text-xs font-mono border border-slate-800">
       <div class="text-center">
-        <span class="block text-slate-400 text-[10px] uppercase font-sans">Transmissão ($d_{trans}$)</span>
+        <span class="block text-slate-400 text-[10px] uppercase font-sans">Transmissão</span>
         <span id="d-trans" class="text-cyan-400 text-sm font-bold">0.0s</span>
       </div>
       <div class="text-center">
-        <span class="block text-slate-400 text-[10px] uppercase font-sans">Propagação ($d_{prop}$)</span>
+        <span class="block text-slate-400 text-[10px] uppercase font-sans">Propagação</span>
         <span id="d-prop" class="text-cyan-400 text-sm font-bold">0.3s</span>
       </div>
       <div class="text-center">
-        <span class="block text-slate-400 text-[10px] uppercase font-sans">Processamento ($d_{proc}$)</span>
+        <span class="block text-slate-400 text-[10px] uppercase font-sans">Processamento</span>
         <span id="d-proc" class="text-cyan-400 text-sm font-bold">0.2s</span>
       </div>
       <div class="text-center">
-        <span class="block text-slate-400 text-[10px] uppercase font-sans">Fila ($d_{fila}$)</span>
+        <span class="block text-slate-400 text-[10px] uppercase font-sans">Fila</span>
         <span id="d-fila" class="text-amber-400 text-sm font-bold">0.0s</span>
       </div>
       <div class="text-center border-l border-slate-700 pl-4">
-        <span class="block text-rose-400 text-[10px] uppercase font-sans font-bold">Atraso Total Nodal ($d_{nodal}$)</span>
+        <span class="block text-rose-400 text-[10px] uppercase font-sans font-bold">Atraso Total Nodal</span>
         <span id="d-nodal" class="text-rose-400 text-sm font-bold">0.0s</span>
       </div>
     </div>
@@ -186,7 +186,7 @@
         { name: "João", router: "R2" },
         { name: "PH", router: "R2" }
       ],
-      defaultMsgs: { "Nalanda": "OLA_JOAO", "Keven": "OI_PH", "João": "", "PH": "PACKET" }
+      defaultMsgs: { "Nalanda": "", "Keven": "", "João": "", "PH": "" }
     };
 
     function renderUI() {
@@ -430,16 +430,16 @@
 
           ev.fragmentacao.forEach(item => {
             let pktsHtml = item.pacotes.map(p => `
-              <div class="bg-slate-900 border border-cyan-500/50 p-2 rounded-lg text-center space-y-1">
-                <div class="text-[9px] text-cyan-400 border-b border-slate-800 pb-0.5">[Hdr: ${p.src}➔${p.dst} | P${p.seq}]</div>
-                <div class="text-xs font-bold text-white font-mono">'${p.payload}'</div>
-              </div>
+              <span class="bg-slate-900 border border-cyan-500/40 px-2 py-0.5 rounded text-[10px] font-mono text-cyan-300 inline-flex items-center gap-1" title="${p.src} ➔ ${p.dst}">
+                <span class="text-slate-400">P${p.seq}:</span>
+                <strong class="text-white">'${p.payload}'</strong>
+              </span>
             `).join('');
 
             fragStage.innerHTML += `
-              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 flex-1 min-w-[200px]">
-                <div class="text-[11px] text-slate-300 font-bold">${item.src} ➔ ${item.dst}: <span class="text-amber-400 font-mono">"${item.msg_original}"</span></div>
-                <div class="flex flex-wrap gap-2">${pktsHtml}</div>
+              <div class="bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 flex items-center gap-2 flex-wrap text-[11px]">
+                <span class="text-slate-300 font-bold whitespace-nowrap">${item.src} ➔ ${item.dst}: <span class="text-amber-400 font-mono">"${item.msg_original}"</span></span>
+                <div class="flex flex-wrap gap-1 items-center">${pktsHtml}</div>
               </div>
             `;
           });

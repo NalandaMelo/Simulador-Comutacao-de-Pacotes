@@ -65,12 +65,14 @@ def simular_universal():
 
     buffers = {r: [] for r in routers}
     caixas_entrada = {u: [] for u in nodes}
+    pacotes_pendentes_retransmissao = []
 
-    # 2. ENTRADA NOS ROTEADORES DE ORIGEM (HOST -> R_SRC)
+    # 2. FASE DE INJEÇÃO EM RAJADA (BURST ARRIVAL NO ROTEADOR DE ORIGEM)
+    # Todos os pacotes da mensagem tentam ocupar a fila do Roteador de Origem
     for pkt in pacotes_dados:
         r_src = pkt['r_origem']
-        payload = pkt['payload']
         src = pkt['src']
+        payload = pkt['payload']
 
         if not r_src or r_src not in buffers:
             continue
@@ -87,9 +89,10 @@ def simular_universal():
                 'sucesso': True,
                 'buffers': {r: len(buffers[r]) for r in routers},
                 'delays': {'d_trans': d_trans, 'd_proc': D_PROC, 'd_prop': D_PROP, 'd_fila': d_fila, 'd_nodal': d_nodal},
-                'log': f"📦 [{src} ➔ {r_src}] Pacote P{pkt['seq']} ('{payload}') entrou na fila do roteador {r_src}."
+                'log': f"📦 [{src} ➔ {r_src}] Pacote P{pkt['seq']} ('{payload}') entrou na fila ({len(buffers[r_src])}/{buffer_limit})."
             })
         else:
+            # ESTOURO DE BUFFER (OVERFLOW)
             d_fila = round(buffer_limit * d_trans, 2)
             d_nodal = round(D_PROC + D_PROP + d_trans + d_fila, 2)
             eventos.append({
@@ -98,74 +101,128 @@ def simular_universal():
                 'pacote': pkt,
                 'sucesso': False,
                 'buffers': {r: len(buffers[r]) for r in routers},
-                'delays': {'d_trans': d_trans, 'd_proc': D_PROC, 'd_prop': D_PROP, 'd_fila': d_fila, 'd_nodal': d_nodal},
-                'log': f"💥 [OVERFLOW {r_src}] Fila cheia em {r_src}! Pacote '{payload}' descartado."
+                'delays': {'d_trans': d_trans, 'd_proc': D_PROP, 'd_fila': d_fila, 'd_nodal': d_nodal},
+                'log': f"💥 [OVERFLOW {r_src}] Buffer lotado ({buffer_limit}/{buffer_limit})! Pacote P{pkt['seq']} ('{payload}') foi DESCARTADO."
+            })
+            if protocol == 'TCP':
+                pacotes_pendentes_retransmissao.append(pkt)
+
+    # 3. FASE DE DRENAGEM E TRANSMISSÃO DAS FILAS DOS ROTEADORES (STORE-AND-FORWARD)
+    def processar_filas():
+        for r_nome in list(routers):
+            while len(buffers[r_nome]) > 0:
+                pkt_proc = buffers[r_nome].pop(0)
+                payload = pkt_proc['payload']
+                r_dst = pkt_proc['r_destino']
+                src, dst = pkt_proc['src'], pkt_proc['dst']
+
+                if r_nome != r_dst:
+                    # Salto entre Roteadores
+                    if len(buffers[r_dst]) < buffer_limit:
+                        buffers[r_dst].append(pkt_proc)
+                        eventos.append({
+                            'tipo': 'salto_inter_roteador',
+                            'r_origem': r_nome,
+                            'r_destino': r_dst,
+                            'pacote': pkt_proc,
+                            'buffers': {r: len(buffers[r]) for r in routers},
+                            'log': f"🔗 [SALTO ROTEADOR] Pacote P{pkt_proc['seq']} ('{payload}') repassado de {r_nome} ➔ {r_dst}."
+                        })
+                    else:
+                        eventos.append({
+                            'tipo': 'drop_inter_roteador',
+                            'r_origem': r_nome,
+                            'r_destino': r_dst,
+                            'pacote': pkt_proc,
+                            'buffers': {r: len(buffers[r]) for r in routers},
+                            'log': f"💥 [DROP ENLACE] Buffer de {r_dst} cheio! Pacote P{pkt_proc['seq']} ('{payload}') perdido."
+                        })
+                        if protocol == 'TCP':
+                            pacotes_pendentes_retransmissao.append(pkt_proc)
+                else:
+                    # Entrega Final ao Host Destino
+                    caixas_entrada[dst].append(pkt_proc)
+                    eventos.append({
+                        'tipo': 'entrega_destino',
+                        'roteador': r_nome,
+                        'pacote': pkt_proc,
+                        'buffers': {r: len(buffers[r]) for r in routers},
+                        'log': f"📬 [{r_nome} ➔ {dst}] Pacote P{pkt_proc['seq']} ('{payload}') entregue com sucesso."
+                    })
+
+                    if protocol == 'TCP':
+                        eventos.append({
+                            'tipo': 'entrega_ack',
+                            'src': dst,
+                            'dst': src,
+                            'pacote': {'payload': f"ACK_{pkt_proc['seq']}"},
+                            'buffers': {r: len(buffers[r]) for r in routers},
+                            'log': f"❇️ [ACK TCP] {dst} enviou confirmação ACK_{pkt_proc['seq']} para {src}."
+                        })
+
+    # Processa os pacotes que conseguiram entrar na fila inicial
+    processar_filas()
+
+    # 4. FASE DE RETRANSMISSÃO TCP (SE HOUVER PACOTES PERDIDOS)
+    tentativas = 0
+    while pacotes_pendentes_retransmissao and protocol == 'TCP' and tentativas < 5:
+        tentativas += 1
+        a_retransmitir = list(pacotes_pendentes_retransmissao)
+        pacotes_pendentes_retransmissao.clear()
+
+        for pkt in a_retransmitir:
+            r_src = pkt['r_origem']
+            src = pkt['src']
+            payload = pkt['payload']
+
+            eventos.append({
+                'tipo': 'retransmissao_tcp',
+                'src': src,
+                'dst': pkt['dst'],
+                'pacote': pkt,
+                'tentativa': tentativas,
+                'buffers': {r: len(buffers[r]) for r in routers},
+                'log': f"🔄 [TIMEOUT / RETRANSMISSÃO TCP] Host {src} não recebeu ACK do Pacote P{pkt['seq']} ('{payload}'). Reenviando (Tentativa {tentativas})..."
             })
 
-    # 3. REPASSE INTER-ROTEADOR E ENTREGA FINAL
-    for r_nome in list(routers):
-        while len(buffers[r_nome]) > 0:
-            pkt_proc = buffers[r_nome].pop(0)
-            payload = pkt_proc['payload']
-            r_dst = pkt_proc['r_destino']
-
-            # Se o destino pertence a outro roteador
-            if r_nome != r_dst:
-                if r_dst in buffers and len(buffers[r_dst]) < buffer_limit:
-                    buffers[r_dst].append(pkt_proc)
-                    eventos.append({
-                        'tipo': 'salto_inter_roteador',
-                        'r_origem': r_nome,
-                        'r_destino': r_dst,
-                        'pacote': pkt_proc,
-                        'buffers': {r: len(buffers[r]) for r in routers},
-                        'log': f"🔗 [SALTO ROTEADOR] Pacote '{payload}' repassado de {r_nome} ➔ {r_dst}."
-                    })
-                else:
-                    eventos.append({
-                        'tipo': 'drop_inter_roteador',
-                        'r_origem': r_nome,
-                        'r_destino': r_dst,
-                        'pacote': pkt_proc,
-                        'buffers': {r: len(buffers[r]) for r in routers},
-                        'log': f"💥 [DROP ENLACE] Buffer de {r_dst} lotado! Pacote '{payload}' perdido no trajeto {r_nome} ➔ {r_dst}."
-                    })
-            else:
-                # Entrega no host final
-                target = pkt_proc['dst']
-                caixas_entrada[target].append(pkt_proc)
+            if len(buffers[r_src]) < buffer_limit:
+                buffers[r_src].append(pkt)
                 eventos.append({
-                    'tipo': 'entrega_destino',
-                    'roteador': r_nome,
-                    'pacote': pkt_proc,
+                    'tipo': 'chegada_roteador',
+                    'roteador': r_src,
+                    'pacote': pkt,
+                    'sucesso': True,
                     'buffers': {r: len(buffers[r]) for r in routers},
-                    'log': f"📬 [{r_nome} ➔ {target}] Pacote P{pkt_proc['seq']} ('{payload}') entregue com sucesso."
+                    'delays': {'d_trans': d_trans, 'd_proc': D_PROC, 'd_prop': D_PROP, 'd_fila': 0, 'd_nodal': D_PROC + D_PROP + d_trans},
+                    'log': f"📦 [{src} ➔ {r_src}] Pacote retransmitido P{pkt['seq']} ('{payload}') entrou na fila ({len(buffers[r_src])}/{buffer_limit})."
                 })
+            else:
+                pacotes_pendentes_retransmissao.append(pkt)
 
-                if protocol == 'TCP':
-                    eventos.append({
-                        'tipo': 'entrega_ack',
-                        'src': target,
-                        'dst': pkt_proc['src'],
-                        'pacote': {'payload': f"ACK_{pkt_proc['seq']}"},
-                        'buffers': {r: len(buffers[r]) for r in routers},
-                        'log': f"❇️ [ACK TCP] {target} enviou confirmação ACK_{pkt_proc['seq']} para {pkt_proc['src']}."
-                    })
+        processar_filas()
 
-    # Reconstituição final
+    # 5. RECONSTITUIÇÃO FINAL DA MENSAGEM
     mensagens_estruturadas = {}
     for user, pkts in caixas_entrada.items():
         agrupado = {}
         for p in pkts:
             rem = p['src']
-            if rem not in agrupado: agrupado[rem] = []
-            agrupado[rem].append(p['payload'])
-        mensagens_estruturadas[user] = [{'de': rem, 'conteudo': "".join(fatias)} for rem, fatias in agrupado.items()]
+            if rem not in agrupado:
+                agrupado[rem] = {}
+            agrupado[rem][p['seq']] = p['payload']
+
+        mensagens_estruturadas[user] = []
+        for rem, seq_dict in agrupado.items():
+            fatias_ordenadas = [seq_dict[seq_num] for seq_num in sorted(seq_dict.keys())]
+            mensagens_estruturadas[user].append({
+                'de': rem,
+                'conteudo': "".join(fatias_ordenadas)
+            })
 
     eventos.append({
         'tipo': 'fim',
         'mensagens': mensagens_estruturadas,
-        'log': "🏁 Simulação da Topologia Dinâmica Concluída!"
+        'log': "🏁 Simulação Concluída!"
     })
 
     return jsonify(eventos)
