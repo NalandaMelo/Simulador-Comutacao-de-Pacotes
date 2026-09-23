@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulador Universal de Comutação de Pacotes</title>
+  <title>Simulador de Comutação: Topologia Configurável</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -33,11 +33,7 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .glow-cyan { box-shadow: 0 0 20px -3px rgba(56, 189, 248, 0.4); }
-    .glow-amber { box-shadow: 0 0 20px -3px rgba(234, 179, 8, 0.4); }
-
-    #pkt-anim {
-      transition: all 0.55s cubic-bezier(0.4, 0, 0.2, 1);
-    }
+    #pkt-anim { transition: all 0.55s cubic-bezier(0.4, 0, 0.2, 1); }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen p-4 md:p-8 antialiased selection:bg-cyan-500 selection:text-slate-950">
@@ -52,62 +48,79 @@
         </div>
         <div>
           <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            Simulador Universal de Comutação de Pacotes
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">P2P Multi-Inbox</span>
+            Simulador de Comutação Multi-Roteador
+            <span class="text-xs font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Topologia Configurável</span>
           </h1>
-          <p class="text-xs text-slate-400 mt-0.5">Visualização de Fragmentação, Fila de Buffer, Retransmissão e Caixas de Entrada Separadas</p>
+          <p class="text-xs text-slate-400 mt-0.5">Crie roteadores customizados, conecte usuários e simule a fragmentação e encaminhamento nodal</p>
         </div>
       </div>
     </header>
 
-    <!-- CONFIGURAÇÕES DE REDE -->
+    <!-- PAINEL DE CONSTRUÇÃO DE TOPOLOGIA -->
     <div class="glass p-5 rounded-2xl border border-slate-800 space-y-4">
-      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-2 text-sm font-bold text-cyan-400">
-          <i data-lucide="sliders" class="w-4 h-4"></i> Parâmetros da Rede
-        </div>
-
-        <div class="flex flex-wrap items-center gap-4">
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-slate-400">Protocolo:</label>
-            <select id="cfg-protocol" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-mono text-cyan-400 focus:outline-none">
-              <option value="TCP" selected>TCP (Confiável - Com Retransmissão)</option>
-              <option value="UDP">UDP (Rápido - Aceita Perda)</option>
-            </select>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-slate-400">Buffer (Fila):</label>
-            <input type="number" id="cfg-buffer" value="4" min="1" max="8" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-mono text-cyan-400">
-          </div>
-
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-slate-400">Pacote ($L$ chars):</label>
-            <input type="number" id="cfg-lchars" value="3" min="1" max="10" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-mono text-cyan-400">
-          </div>
-        </div>
+      <div class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+        <i data-lucide="settings" class="w-4 h-4"></i> Construção da Rede e Parâmetros
       </div>
 
-      <div class="flex items-center gap-2">
-        <input type="text" id="new-node-name" placeholder="Nome do novo nó (Ex: Maria)" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
-        <button onclick="adicionarNo()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition">
-          <i data-lucide="plus-circle" class="w-4 h-4"></i> Adicionar Nó
-        </button>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-b border-slate-800 pb-4">
+
+        <!-- Adicionar Roteador -->
+        <div class="space-y-1">
+          <label class="text-[11px] text-slate-400 font-bold">Novo Roteador:</label>
+          <div class="flex gap-2">
+            <input type="text" id="new-router-name" placeholder="Ex: R3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono">
+            <button onclick="adicionarRoteador()" class="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition whitespace-nowrap">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i> Roteador
+            </button>
+          </div>
+        </div>
+
+        <!-- Adicionar Usuário -->
+        <div class="space-y-1">
+          <label class="text-[11px] text-slate-400 font-bold">Novo Usuário e Roteador Pai:</label>
+          <div class="flex gap-2">
+            <input type="text" id="new-user-name" placeholder="Ex: Carlos" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+            <select id="new-user-router" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-cyan-400 font-mono focus:outline-none"></select>
+            <button onclick="adicionarUsuario()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1 transition whitespace-nowrap">
+              <i data-lucide="user-plus" class="w-4 h-4"></i> Usuário
+            </button>
+          </div>
+        </div>
+
+        <!-- Configurações Globais -->
+        <div class="flex items-center gap-4 pt-4 lg:pt-0">
+          <div>
+            <label class="text-[11px] text-slate-400 font-bold block">Protocolo:</label>
+            <select id="cfg-protocol" class="mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-cyan-400">
+              <option value="TCP" selected>TCP</option>
+              <option value="UDP">UDP</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 font-bold block">Buffer/Roteador:</label>
+            <input type="number" id="cfg-buffer" value="4" min="1" max="8" class="mt-1 w-14 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-mono text-cyan-400">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 font-bold block">Pacote ($L$):</label>
+            <input type="number" id="cfg-lchars" value="3" min="1" max="10" class="mt-1 w-14 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-center font-mono text-cyan-400">
+          </div>
+        </div>
+
       </div>
     </div>
 
-    <!-- CARDS DOS USUÁRIOS -->
+    <!-- CARDS DE TRANSMISSÃO DOS USUÁRIOS -->
     <div id="users-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
 
     <button onclick="iniciarSimulacao()" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-cyan-500/20 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2">
       <i data-lucide="play-circle" class="w-5 h-5"></i>
-      Simular Fragmentação e Transmissão
+      Iniciar Simulação de Roteamento Dinâmico
     </button>
 
     <!-- ESTÁGIO 1: FRAGMENTAÇÃO -->
     <div class="glass p-5 rounded-2xl border border-slate-800 space-y-3">
       <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400">
-        <i data-lucide="scissors" class="w-4 h-4"></i> Estágio 1: Divisão de Mensagens em Pacotes
+        <i data-lucide="scissors" class="w-4 h-4"></i> Estágio 1: Divisão das Mensagens em Pacotes (Fragmentação)
       </div>
       <div id="frag-stage" class="flex flex-wrap gap-3 font-mono text-xs">
         <span class="text-slate-500 text-xs italic">Aguardando início...</span>
@@ -138,109 +151,113 @@
       </div>
     </div>
 
-    <!-- ARENA DA REDE -->
-    <div class="glass rounded-2xl p-6 relative min-h-[300px] flex items-center justify-between overflow-hidden border border-slate-800" id="canvas-area">
+    <!-- ARENA VISUAL DA REDE (RENDERIZADA DINAMICAMENTE) -->
+    <div class="glass rounded-2xl p-6 relative min-h-[380px] border border-slate-800 overflow-hidden" id="canvas-area">
 
-      <div id="pkt-anim" class="absolute pointer-events-none opacity-0 z-30 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-2xl flex items-center gap-1 border">
+      <!-- BADGE ANIMADO DO PACOTE VOANDO -->
+      <div id="pkt-anim" class="absolute pointer-events-none opacity-0 z-50 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-2xl flex items-center gap-1 border">
         <i data-lucide="package" class="w-3.5 h-3.5"></i>
         <span id="pkt-text">PKT</span>
       </div>
 
-      <div class="space-y-3 z-10">
-        <div class="text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Origens (Hosts)</div>
-        <div id="nodes-left" class="space-y-2"></div>
-      </div>
-
-      <div class="hidden sm:flex flex-col items-center justify-center gap-1 text-slate-600">
-        <i data-lucide="arrow-right" class="w-6 h-6 text-cyan-500 animate-pulse"></i>
-        <span class="text-[9px] font-mono">Enlace In</span>
-      </div>
-
-      <div class="glass p-5 rounded-2xl border-2 border-amber-500/50 glow-amber z-10 text-center space-y-3 min-w-[200px]">
-        <div class="flex items-center justify-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wide">
-          <i data-lucide="router" class="w-5 h-5"></i> Roteador Central
-        </div>
-        <div class="text-[11px] font-mono text-slate-400" id="txt-buffer">Fila: 0 Vagas</div>
-        <div class="flex justify-center gap-1.5 flex-wrap max-w-[180px]" id="buffer-slots"></div>
-      </div>
-
-      <div class="hidden sm:flex flex-col items-center justify-center gap-1 text-slate-600">
-        <i data-lucide="arrow-right" class="w-6 h-6 text-cyan-500 animate-pulse"></i>
-        <span class="text-[9px] font-mono">Enlace Out</span>
-      </div>
-
-      <div class="space-y-3 z-10">
-        <div class="text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-2">Destinos (Inboxes)</div>
-        <div id="nodes-right" class="space-y-2"></div>
-      </div>
-
+      <!-- GRID DINÂMICO DE ROTEADORES E SEUS HOSTS -->
+      <div id="router-arena" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10"></div>
     </div>
 
-    <!-- TERMINAL DE LOGS -->
+    <!-- CONSOLE DE LOGS -->
     <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-xs space-y-2">
       <div class="flex items-center justify-between text-slate-500 border-b border-slate-800 pb-2 text-[11px]">
-        <span class="flex items-center gap-2"><i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i> Console de Execução</span>
+        <span class="flex items-center gap-2"><i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i> Console de Execução Nodal</span>
       </div>
-      <div id="log-console" class="h-32 overflow-y-auto space-y-1 text-slate-300 pr-2">
-        <span class="text-slate-600">> Clique em Simular para iniciar...</span>
+      <div id="log-console" class="h-36 overflow-y-auto space-y-1 text-slate-300 pr-2">
+        <span class="text-slate-600">> Configure sua topologia e clique em Iniciar Simulação...</span>
       </div>
     </div>
 
   </div>
 
   <script>
+    // ESTADO INICIAL DINÂMICO
     let state = {
-      nodes: ["Nalanda", "Keven", "Adolfo", "PH"],
-      defaultMsgs: { "Nalanda": "OLA_ADOLFO", "Keven": "OI_PH", "Adolfo": "", "PH": "PACKET" }
+      routers: ["R1", "R2"],
+      nodes: [
+        { name: "Nalanda", router: "R1" },
+        { name: "Keven", router: "R1" },
+        { name: "João", router: "R2" },
+        { name: "PH", router: "R2" }
+      ],
+      defaultMsgs: { "Nalanda": "OLA_JOAO", "Keven": "OI_PH", "João": "", "PH": "PACKET" }
     };
 
     function renderUI() {
+      // 1. Atualizar Select de Roteadores no Painel
+      const selectRoteadorPai = document.getElementById('new-user-router');
+      selectRoteadorPai.innerHTML = state.routers.map(r => `<option value="${r}">${r}</option>`).join('');
+
+      // 2. Renderizar Formulários dos Usuários
       const userContainer = document.getElementById('users-container');
       userContainer.innerHTML = '';
 
-      state.nodes.forEach((node) => {
-        const otherNodes = state.nodes.filter(n => n !== node);
-        const optionsHtml = otherNodes.map(n => `<option value="${n}">${n}</option>`).join('');
+      state.nodes.forEach(u => {
+        const otherNodes = state.nodes.filter(n => n.name !== u.name);
+        const options = otherNodes.map(n => `<option value="${n.name}">${n.name} (${n.router})</option>`).join('');
 
         userContainer.innerHTML += `
-          <div class="glass p-4 rounded-xl border-t-4 border-cyan-400 space-y-3 relative">
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-sm text-cyan-300 flex items-center gap-1.5">
-                <i data-lucide="user" class="w-4 h-4"></i> ${node}
-              </span>
-              <button onclick="removerNo('${node}')" class="text-slate-500 hover:text-rose-400 text-xs transition">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-              </button>
+          <div class="glass p-3.5 rounded-xl border-t-2 border-cyan-400 space-y-2">
+            <div class="font-bold text-xs text-slate-200 flex justify-between items-center">
+              <span class="flex items-center gap-1"><i data-lucide="user" class="w-3.5 h-3.5 text-cyan-400"></i> ${u.name}</span>
+              <div class="flex items-center gap-1">
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">${u.router}</span>
+                <button onclick="removerUsuario('${u.name}')" class="text-slate-500 hover:text-rose-400 transition ml-1">
+                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
             </div>
             <div>
-              <label class="text-[11px] text-slate-400 font-medium">Enviar Para:</label>
-              <select id="dst-${node}" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
-                ${optionsHtml}
-              </select>
+              <label class="text-[10px] text-slate-400 font-medium">Destino:</label>
+              <select id="dst-${u.name}" class="w-full mt-0.5 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none">${options}</select>
             </div>
             <div>
-              <label class="text-[11px] text-slate-400 font-medium">Mensagem:</label>
-              <input type="text" id="msg-${node}" value="${state.defaultMsgs[node] || ''}" placeholder="(opcional)" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono text-slate-200 focus:outline-none">
+              <label class="text-[10px] text-slate-400 font-medium">Mensagem:</label>
+              <input type="text" id="msg-${u.name}" value="${state.defaultMsgs[u.name] || ''}" class="w-full mt-0.5 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-slate-200 focus:outline-none">
             </div>
           </div>
         `;
       });
 
-      const leftCanvas = document.getElementById('nodes-left');
-      const rightCanvas = document.getElementById('nodes-right');
-      leftCanvas.innerHTML = '';
-      rightCanvas.innerHTML = '';
+      // 3. Renderizar Roteadores e Hosts na Arena
+      const arena = document.getElementById('router-arena');
+      arena.innerHTML = '';
 
-      state.nodes.forEach(node => {
-        leftCanvas.innerHTML += `
-          <div id="node-${node}" class="glass px-3 py-1.5 rounded-lg border border-cyan-500/40 text-xs font-bold text-cyan-300 flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> ${node}
+      state.routers.forEach(r => {
+        const hostsDoRoteador = state.nodes.filter(n => n.router === r);
+        let hostsHtml = hostsDoRoteador.map(h => `
+          <div id="node-${h.name}" class="glass p-2 rounded-lg border border-slate-800 text-xs font-mono text-slate-300 space-y-1">
+            <div class="flex items-center justify-between font-bold border-b border-slate-800 pb-1">
+              <span class="text-cyan-300">${h.name}</span>
+              <span class="text-[9px] text-slate-500">Host</span>
+            </div>
+            <div id="inbox-content-${h.name}" class="text-[10px] text-slate-400 italic">Inbox: Vazio</div>
           </div>
-        `;
-        rightCanvas.innerHTML += `
-          <div id="recv-${node}" class="glass px-3 py-2 rounded-lg border border-slate-800 text-xs font-mono text-slate-300 min-w-[140px] space-y-1">
-            <div class="text-[10px] text-slate-500 font-bold border-b border-slate-800 pb-1">${node} (Inbox):</div>
-            <div id="inbox-content-${node}" class="text-[11px] text-slate-400 italic">Vazio</div>
+        `).join('');
+
+        arena.innerHTML += `
+          <div class="glass p-4 rounded-xl border border-slate-800 space-y-4">
+            <div id="card-${r}" class="glass p-3 rounded-xl border-2 border-cyan-500/50 glow-cyan text-center space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-1.5 text-cyan-400 font-bold text-xs uppercase">
+                  <i data-lucide="router" class="w-4 h-4"></i> Roteador ${r}
+                </span>
+                ${state.routers.length > 1 ? `<button onclick="removerRoteador('${r}')" class="text-slate-500 hover:text-rose-400 text-xs"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : ''}
+              </div>
+              <div class="text-[10px] font-mono text-slate-400" id="txt-buffer-${r}">Fila ${r}: 0/4</div>
+              <div class="flex justify-center gap-1 flex-wrap" id="buffer-slots-${r}"></div>
+            </div>
+
+            <div class="space-y-2">
+              <div class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">Hosts Conectados:</div>
+              ${hostsHtml || '<div class="text-xs text-slate-600 italic">Nenhum host conectado</div>'}
+            </div>
           </div>
         `;
       });
@@ -251,106 +268,150 @@
 
     function renderBufferSlots() {
       const limit = parseInt(document.getElementById('cfg-buffer').value) || 4;
-      const slotsContainer = document.getElementById('buffer-slots');
-      document.getElementById('txt-buffer').innerText = `Fila: 0/${limit} Vagas`;
-      slotsContainer.innerHTML = '';
+      state.routers.forEach(r => {
+        const slotsContainer = document.getElementById(`buffer-slots-${r}`);
+        if(slotsContainer) {
+          document.getElementById(`txt-buffer-${r}`).innerText = `Fila ${r}: 0/${limit} Vagas`;
+          slotsContainer.innerHTML = '';
+          for(let i=0; i<limit; i++) {
+            slotsContainer.innerHTML += `<div id="s-${r}-${i}" class="w-4 h-4 rounded border border-dashed border-slate-700 bg-slate-900 transition-all duration-300"></div>`;
+          }
+        }
+      });
+    }
 
+    function atualizarBuffer(r, qtd, limit) {
+      const txtElem = document.getElementById(`txt-buffer-${r}`);
+      if(txtElem) txtElem.innerText = `Fila ${r}: ${qtd}/${limit} Vagas`;
       for(let i=0; i<limit; i++) {
-        slotsContainer.innerHTML += `<div id="s${i}" class="w-5 h-5 rounded border-2 border-dashed border-slate-700 bg-slate-900 transition-all duration-300"></div>`;
-      }
-    }
-
-    function adicionarNo() {
-      const input = document.getElementById('new-node-name');
-      const name = input.value.trim();
-      if(name && !state.nodes.includes(name)) {
-        state.nodes.push(name);
-        input.value = '';
-        renderUI();
-      }
-    }
-
-    function removerNo(name) {
-      if(state.nodes.length > 2) {
-        state.nodes = state.nodes.filter(n => n !== name);
-        renderUI();
-      } else {
-        alert("A rede precisa de pelo menos 2 nós!");
-      }
-    }
-
-    document.getElementById('cfg-buffer').addEventListener('change', renderBufferSlots);
-
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-    function atualizarBuffer(qtd, limit) {
-      document.getElementById('txt-buffer').innerText = `Fila: ${qtd}/${limit} Vagas`;
-      for(let i=0; i<limit; i++) {
-        const slot = document.getElementById(`s${i}`);
+        const slot = document.getElementById(`s-${r}-${i}`);
         if(slot) {
           if(i < qtd) {
-            slot.className = 'w-5 h-5 rounded border-2 border-amber-400 bg-amber-500 shadow-lg shadow-amber-500/50 transition-all duration-300 scale-105';
+            slot.className = 'w-4 h-4 rounded border border-amber-400 bg-amber-500 shadow-md transition-all duration-300 scale-105';
           } else {
-            slot.className = 'w-5 h-5 rounded border-2 border-dashed border-slate-700 bg-slate-900 transition-all duration-300';
+            slot.className = 'w-4 h-4 rounded border border-dashed border-slate-700 bg-slate-900 transition-all duration-300';
           }
         }
       }
     }
 
-    async function animarPacote(tipo, texto, startX, startY, endX, endY) {
+    // AÇÕES DE ADIÇÃO E REMOÇÃO DINÂMICA
+    function adicionarRoteador() {
+      const input = document.getElementById('new-router-name');
+      const rName = input.value.trim().toUpperCase();
+      if(rName && !state.routers.includes(rName)) {
+        state.routers.push(rName);
+        input.value = '';
+        renderUI();
+      }
+    }
+
+    function removerRoteador(rName) {
+      if(state.routers.length > 1) {
+        state.routers = state.routers.filter(r => r !== rName);
+        state.nodes = state.nodes.filter(n => n.router !== rName); // remove hosts associados
+        renderUI();
+      }
+    }
+
+    function adicionarUsuario() {
+      const input = document.getElementById('new-user-name');
+      const rSelect = document.getElementById('new-user-router');
+      const uName = input.value.trim();
+      if(uName && !state.nodes.some(n => n.name === uName)) {
+        state.nodes.push({ name: uName, router: rSelect.value });
+        input.value = '';
+        renderUI();
+      }
+    }
+
+    function removerUsuario(uName) {
+      if(state.nodes.length > 2) {
+        state.nodes = state.nodes.filter(n => n.name !== uName);
+        renderUI();
+      } else {
+        alert("A rede precisa de pelo menos 2 usuários!");
+      }
+    }
+
+    document.getElementById('cfg-buffer').addEventListener('change', renderBufferSlots);
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    // ANIMAÇÃO DINÂMICA BASEADA NAS COORDENADAS DO DOM
+    async function animarPacoteEl(fromId, toId, payload, tipo = 'DATA') {
+      const fromEl = document.getElementById(fromId);
+      const toEl = document.getElementById(toId);
       const pkt = document.getElementById('pkt-anim');
       const txt = document.getElementById('pkt-text');
-      txt.innerText = texto;
+      const canvas = document.getElementById('canvas-area');
 
-      if(tipo === 'DATA') {
-        pkt.className = 'absolute pointer-events-none z-30 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-2xl flex items-center gap-1 bg-cyan-500 text-slate-950 border border-cyan-300 glow-cyan';
+      if (!fromEl || !toEl || !pkt) return;
+
+      const cRect = canvas.getBoundingClientRect();
+      const fRect = fromEl.getBoundingClientRect();
+      const tRect = toEl.getBoundingClientRect();
+
+      const startX = fRect.left + fRect.width / 2 - cRect.left;
+      const startY = fRect.top + fRect.height / 2 - cRect.top;
+      const endX = tRect.left + tRect.width / 2 - cRect.left;
+      const endY = tRect.top + tRect.height / 2 - cRect.top;
+
+      txt.innerText = payload;
+
+      if (tipo === 'DATA') {
+        pkt.className = 'absolute pointer-events-none z-50 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-2xl flex items-center gap-1 bg-cyan-500 text-slate-950 border border-cyan-300 glow-cyan';
       } else {
-        pkt.className = 'absolute pointer-events-none z-30 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-2xl flex items-center gap-1 bg-emerald-400 text-slate-950 border border-emerald-200 glow-emerald';
+        pkt.className = 'absolute pointer-events-none z-50 px-3 py-1 rounded-full text-xs font-mono font-bold shadow-2xl flex items-center gap-1 bg-emerald-400 text-slate-950 border border-emerald-200 glow-emerald';
       }
 
+      pkt.style.transition = 'none';
       pkt.style.left = startX + 'px';
       pkt.style.top = startY + 'px';
       pkt.style.opacity = '1';
 
-      await sleep(50);
+      pkt.offsetHeight; // Força re-render do CSS
+
+      pkt.style.transition = 'all 0.55s cubic-bezier(0.4, 0, 0.2, 1)';
       pkt.style.left = endX + 'px';
       pkt.style.top = endY + 'px';
 
-      await sleep(550);
+      await sleep(600);
       pkt.style.opacity = '0';
     }
 
     async function iniciarSimulacao() {
       const logElem = document.getElementById('log-console');
-      logElem.innerHTML = '<span class="text-cyan-400">> Processando fragmentação e simulação...</span>';
+      logElem.innerHTML = '<span class="text-cyan-400">> Iniciando simulação da rede...</span>';
 
       const limit = parseInt(document.getElementById('cfg-buffer').value) || 4;
       const lchars = parseInt(document.getElementById('cfg-lchars').value) || 3;
       const protocol = document.getElementById('cfg-protocol').value;
 
-      atualizarBuffer(0, limit);
+      state.routers.forEach(r => atualizarBuffer(r, 0, limit));
       state.nodes.forEach(u => {
-        document.getElementById(`inbox-content-${u}`).innerHTML = '<span class="italic text-slate-500">Vazio</span>';
+        document.getElementById(`inbox-content-${u.name}`).innerHTML = '<span class="italic text-slate-500 font-normal">Inbox: Vazio</span>';
       });
 
-      const transmissoes = state.nodes.map(u => ({
-        src: u,
-        dst: document.getElementById(`dst-${u}`).value,
-        msg: document.getElementById(`msg-${u}`).value
-      }));
+      const hostRouterMap = {};
+      state.nodes.forEach(n => hostRouterMap[n.name] = n.router);
 
-      const payloadReq = {
-        nodes: state.nodes,
-        transmissions: transmissoes,
-        buffer_limit: limit,
-        l_chars: lchars,
-        protocol: protocol
-      };
+      const transmissoes = state.nodes.map(u => ({
+        src: u.name,
+        dst: document.getElementById(`dst-${u.name}`).value,
+        msg: document.getElementById(`msg-${u.name}`).value
+      }));
 
       const resp = await fetch('/api/simular_universal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payloadReq)
+        body: JSON.stringify({
+          routers: state.routers,
+          host_router_map: hostRouterMap,
+          transmissions: transmissoes,
+          buffer_limit: limit,
+          l_chars: lchars,
+          protocol: protocol
+        })
       });
 
       const eventos = await resp.json();
@@ -388,33 +449,36 @@
           document.getElementById('d-nodal').innerText = ev.delays.d_nodal + 's';
 
           if(ev.sucesso) {
-            await animarPacote('DATA', ev.pacote.payload, 120, 150, 480, 150);
+            await animarPacoteEl(`node-${ev.pacote.src}`, `card-${ev.roteador}`, ev.pacote.payload, 'DATA');
           }
-          atualizarBuffer(ev.buffer_atual, limit);
+          atualizarBuffer(ev.roteador, ev.buffers[ev.roteador], limit);
+        }
+        else if (ev.tipo === 'salto_inter_roteador') {
+          await animarPacoteEl(`card-${ev.r_origem}`, `card-${ev.r_destino}`, ev.pacote.payload, 'DATA');
+          atualizarBuffer(ev.r_origem, ev.buffers[ev.r_origem], limit);
+          atualizarBuffer(ev.r_destino, ev.buffers[ev.r_destino], limit);
         }
         else if (ev.tipo === 'entrega_destino') {
-          await animarPacote('DATA', ev.pacote.payload, 480, 150, 850, 150);
-          atualizarBuffer(ev.buffer_atual, limit);
+          await animarPacoteEl(`card-${ev.roteador}`, `node-${ev.pacote.dst}`, ev.pacote.payload, 'DATA');
+          atualizarBuffer(ev.roteador, ev.buffers[ev.roteador], limit);
         }
         else if (ev.tipo === 'entrega_ack') {
-          await animarPacote('ACK', ev.pacote.payload, 480, 150, 120, 150);
-          atualizarBuffer(ev.buffer_atual, limit);
+          await animarPacoteEl(`node-${ev.src}`, `node-${ev.dst}`, ev.pacote.payload, 'ACK');
         }
         else if (ev.tipo === 'fim') {
-          // EXIBIÇÃO FORMATADA DAS MENSAGENS POR REMETENTE
           state.nodes.forEach(u => {
-            const inboxElem = document.getElementById(`inbox-content-${u}`);
-            const mensagensRecebidas = ev.mensagens[u];
+            const inboxElem = document.getElementById(`inbox-content-${u.name}`);
+            const mensagensRecebidas = ev.mensagens[u.name];
 
             if (mensagensRecebidas && mensagensRecebidas.length > 0) {
               inboxElem.innerHTML = mensagensRecebidas.map(m => `
-                <div class="bg-slate-900 border border-slate-700 rounded p-1.5 text-[11px] my-1">
+                <div class="bg-slate-900 border border-slate-700 rounded p-1 text-[10px] my-1">
                   <span class="text-cyan-400 font-bold">De ${m.de}:</span>
                   <span class="text-emerald-300 font-mono block font-semibold mt-0.5">'${m.conteudo}'</span>
                 </div>
               `).join('');
             } else {
-              inboxElem.innerHTML = '<span class="italic text-slate-500">Nenhuma mensagem</span>';
+              inboxElem.innerHTML = '<span class="italic text-slate-500 font-normal">Inbox: Vazio</span>';
             }
           });
         }
